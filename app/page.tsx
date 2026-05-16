@@ -2,27 +2,30 @@ import { promises as fs } from "fs";
 import path from "path";
 import Top3Section from "@/components/Top3Section";
 import ETFTable from "@/components/ETFTable";
+import HistorySection from "@/components/HistorySection";
 
 async function getData() {
   const dataDir = path.join(process.cwd(), "public", "data");
   try {
-    const [summaryRaw, top3Raw] = await Promise.all([
+    const [summaryRaw, top3Raw, historyRaw] = await Promise.all([
       fs.readFile(path.join(dataDir, "etf_summary.json"), "utf-8"),
       fs.readFile(path.join(dataDir, "top3.json"), "utf-8"),
+      fs.readFile(path.join(dataDir, "history.json"), "utf-8").catch(() => '{"updated":"","records":[]}'),
     ]);
     return {
       summary: JSON.parse(summaryRaw),
       top3: JSON.parse(top3Raw),
+      history: JSON.parse(historyRaw),
     };
   } catch {
-    return { summary: null, top3: null };
+    return { summary: null, top3: null, history: null };
   }
 }
 
-export const revalidate = 3600; // 1시간마다 ISR 재생성
+export const revalidate = 3600;
 
 export default async function Home() {
-  const { summary, top3 } = await getData();
+  const { summary, top3, history } = await getData();
 
   if (!summary) {
     return (
@@ -33,8 +36,8 @@ export default async function Home() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* 갱신 시각 */}
+    <div className="space-y-10">
+      {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">국내 ETF 거래량 상위 {summary.count}개</h2>
@@ -45,11 +48,16 @@ export default async function Home() {
         </span>
       </div>
 
-      {/* AI Top3 */}
+      {/* AI Top3 오늘 추천 */}
       {top3 && <Top3Section top3={top3} />}
 
       {/* ETF 전체 테이블 */}
       <ETFTable etfs={summary.etfs} />
+
+      {/* 일별 추천 기록 */}
+      {history && history.records?.length > 0 && (
+        <HistorySection history={history} />
+      )}
     </div>
   );
 }
