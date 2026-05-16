@@ -21,9 +21,10 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: scripts/requirements.txt
 
       - name: Install dependencies
-        run: pip install pykrx pandas numpy
+        run: pip install -r scripts/requirements.txt
 
       - name: Fetch ETF data
         run: python scripts/fetch_etf_data.py
