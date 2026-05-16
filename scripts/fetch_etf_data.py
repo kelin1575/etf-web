@@ -16,10 +16,32 @@ OUT_DIR = Path(__file__).parent.parent / "public" / "data"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # pykrx용 날짜 (YYYYMMDD), 표시용 날짜 (YYYY-MM-DD)
-_now      = datetime.now()
-TODAY     = _now.strftime("%Y%m%d")
-TODAY_DISP = _now.strftime("%Y-%m-%d")
-START_3M  = (_now - timedelta(days=95)).strftime("%Y%m%d")
+_now = datetime.now()
+
+def _find_trading_date() -> str:
+    """가장 최근 거래일 날짜 반환 (주말·데이터 없는 날 건너뜀, 최대 7일 전까지)"""
+    from pykrx import stock
+    for delta in range(0, 8):
+        d = (_now - timedelta(days=delta)).strftime("%Y%m%d")
+        if datetime.strptime(d, "%Y%m%d").weekday() >= 5:
+            continue  # 주말 스킵
+        try:
+            df = stock.get_etf_ohlcv_by_ticker(d)
+            if not df.empty:
+                print(f"  거래일 확인: {d}")
+                return d
+        except Exception:
+            continue
+    # 마지막 fallback: 최근 평일
+    for delta in range(1, 8):
+        d = (_now - timedelta(days=delta)).strftime("%Y%m%d")
+        if datetime.strptime(d, "%Y%m%d").weekday() < 5:
+            return d
+    return _now.strftime("%Y%m%d")
+
+TODAY      = _find_trading_date()
+TODAY_DISP = datetime.strptime(TODAY, "%Y%m%d").strftime("%Y-%m-%d")
+START_3M   = (datetime.strptime(TODAY, "%Y%m%d") - timedelta(days=95)).strftime("%Y%m%d")
 
 # ── ETF 전체 OHLCV 캐시 (get_etf_ohlcv_by_ticker는 1번만 호출) ──
 _etf_snapshot: pd.DataFrame | None = None
@@ -31,6 +53,7 @@ def _get_etf_snapshot() -> pd.DataFrame:
         try:
             df = stock.get_etf_ohlcv_by_ticker(TODAY)
             _etf_snapshot = df if not df.empty else pd.DataFrame()
+            print(f"  ETF 스냅샷: {len(_etf_snapshot)}개 티커")
         except Exception as e:
             print(f"  ETF 스냅샷 실패: {e}")
             _etf_snapshot = pd.DataFrame()
@@ -95,12 +118,13 @@ def get_top100_tickers() -> list[str]:
             snap["_turnover"] = snap["거래량"] * snap["기준가격"]
             return list(snap.sort_values("_turnover", ascending=False).head(100).index)
         return list(snap.head(100).index)
-    # fallback
-    try:
-        all_tickers = stock.get_market_ticker_list(TODAY, market="ETF")
-        return list(all_tickers[:100])
-    except Exception:
-        return []
+    # fallback: 스냅샷 index에서 티커 추출
+    if not snap.empty:
+        return list(snap.index[:100])
+    # 최후 fallback: 알려진 주요 ETF 티커
+    return ["069500","360750","371460","379800","381180","102110","114260",
+            "148070","214980","261220","261240","284430","273130","229200",
+            "091160","091180","385720","360200","453850","133690"]
 
 
 def calc_indicators(df: pd.DataFrame) -> dict:
