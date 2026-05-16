@@ -17,7 +17,8 @@ export default function CandleChart({ ticker, bars }: { ticker: string; bars: Ba
   useEffect(() => {
     if (!chartRef.current || bars.length === 0) return;
 
-    let chart: { remove: () => void } | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let chart: any = null;
 
     (async () => {
       const { createChart, ColorType, CandlestickSeries, HistogramSeries } = await import("lightweight-charts");
@@ -80,7 +81,7 @@ export default function CandleChart({ ticker, bars }: { ticker: string; bars: Ba
       // 리사이즈 대응
       const ro = new ResizeObserver(() => {
         if (chartRef.current && chart) {
-          (chart as { applyOptions: (o: object) => void }).applyOptions({ width: chartRef.current.clientWidth });
+          chart.applyOptions({ width: chartRef.current.clientWidth });
         }
       });
       ro.observe(el);
