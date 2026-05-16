@@ -102,7 +102,7 @@ export default function HistorySection({ history }: { history: HistoryData }) {
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-gray-800">
                   {/* 전략 코멘트 */}
-                  <p className="text-xs text-gray-400 mt-3 mb-4 leading-relaxed bg-gray-800/40 rounded-lg px-3 py-2">
+                  <p className="history-strategy text-xs mt-3 mb-4 bg-slate-800/60 border border-slate-700/40 rounded-lg px-3 py-2">
                     {record.strategy}
                   </p>
 
@@ -163,7 +163,7 @@ export default function HistorySection({ history }: { history: HistoryData }) {
                         </div>
 
                         {/* 추천 사유 */}
-                        <p className="text-xs text-gray-400 leading-relaxed border-t border-gray-700/50 pt-2">
+                        <p className="history-reason border-t border-gray-700/50 pt-2">
                           {pick.reason}
                         </p>
                       </div>

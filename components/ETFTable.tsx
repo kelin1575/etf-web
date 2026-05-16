@@ -33,24 +33,35 @@ const CAT_COLOR: Record<string, string> = {
 
 type SortKey = keyof ETF;
 
+/* ── 셀 컴포넌트 ─────────────────────────────── */
 function PctCell({ v }: { v: number | null }) {
-  if (v == null) return <td className="px-3 py-2 text-gray-600">—</td>;
-  const color = v > 0 ? "text-red-400" : v < 0 ? "text-blue-400" : "text-gray-400";
-  return <td className={`px-3 py-2 text-right font-mono ${color}`}>{v > 0 ? "+" : ""}{v.toFixed(1)}%</td>;
+  if (v == null) return <td className="px-3 py-2 cell-dash">—</td>;
+  if (v > 0) return <td className="px-3 py-2 cell-pos">{`+${v.toFixed(1)}%`}</td>;
+  if (v < 0) return <td className="px-3 py-2 cell-neg">{`${v.toFixed(1)}%`}</td>;
+  return <td className="px-3 py-2 cell-neutral">0.0%</td>;
 }
 
-function NumCell({ v, unit = "" }: { v: number | null; unit?: string }) {
-  if (v == null) return <td className="px-3 py-2 text-gray-600">—</td>;
-  return <td className="px-3 py-2 text-right font-mono text-gray-300">{v.toFixed(1)}{unit}</td>;
+function StatCell({ v, unit = "" }: { v: number | null; unit?: string }) {
+  if (v == null) return <td className="px-3 py-2 cell-dash">—</td>;
+  return <td className="px-3 py-2 cell-stat">{v.toFixed(1)}{unit}</td>;
+}
+
+function RsiCell({ v }: { v: number | null }) {
+  if (v == null) return <td className="px-3 py-2 cell-dash">—</td>;
+  const cls = v > 70 ? "cell-pos" : v < 30 ? "cell-neg" : "cell-stat";
+  return <td className={`px-3 py-2 ${cls}`}>{v.toFixed(0)}</td>;
 }
 
 function SortHeader({ label, sortKey, current, asc, onClick }: {
-  label: string; sortKey: SortKey; current: SortKey; asc: boolean; onClick: (k: SortKey) => void;
+  label: string; sortKey: SortKey; current: SortKey; asc: boolean;
+  onClick: (k: SortKey) => void;
 }) {
   const active = current === sortKey;
   return (
     <th
-      className="px-3 py-2 text-right text-xs text-gray-400 cursor-pointer hover:text-white select-none whitespace-nowrap"
+      className={`px-3 py-2.5 text-right text-xs cursor-pointer select-none whitespace-nowrap transition-colors ${
+        active ? "text-white" : "text-slate-400 hover:text-slate-200"
+      }`}
       onClick={() => onClick(sortKey)}
     >
       {label} {active ? (asc ? "▲" : "▼") : "↕"}
@@ -58,6 +69,7 @@ function SortHeader({ label, sortKey, current, asc, onClick }: {
   );
 }
 
+/* ── 메인 컴포넌트 ───────────────────────────── */
 export default function ETFTable({ etfs }: { etfs: ETF[] }) {
   const [search, setSearch]   = useState("");
   const [cat, setCat]         = useState("전체");
@@ -102,24 +114,24 @@ export default function ETFTable({ etfs }: { etfs: ETF[] }) {
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 cat === c
                   ? "bg-white text-gray-900"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
               }`}
             >
               {c}
             </button>
           ))}
         </div>
-        <span className="ml-auto text-xs text-gray-500">{filtered.length}개</span>
+        <span className="ml-auto text-xs text-gray-400">{filtered.length}개</span>
       </div>
 
       {/* 테이블 */}
       <div className="overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full text-sm">
-          <thead className="bg-gray-900 sticky top-0">
+          <thead className="bg-gray-900 sticky top-0 border-b border-gray-700">
             <tr>
-              <th className="px-3 py-2 text-left text-xs text-gray-400 w-8">#</th>
-              <th className="px-3 py-2 text-left text-xs text-gray-400 min-w-[160px]">종목명</th>
-              <th className="px-3 py-2 text-left text-xs text-gray-400 whitespace-nowrap">분류</th>
+              <th className="px-3 py-2.5 text-left text-xs text-slate-400 w-8">#</th>
+              <th className="px-3 py-2.5 text-left text-xs text-slate-400 min-w-[160px]">종목명</th>
+              <th className="px-3 py-2.5 text-left text-xs text-slate-400 whitespace-nowrap">분류</th>
               <SortHeader label="현재가"    sortKey="price_last"  current={sortKey} asc={asc} onClick={handleSort} />
               <SortHeader label="1M수익"    sortKey="mom_1m"      current={sortKey} asc={asc} onClick={handleSort} />
               <SortHeader label="3M수익"    sortKey="mom_3m"      current={sortKey} asc={asc} onClick={handleSort} />
@@ -127,50 +139,67 @@ export default function ETFTable({ etfs }: { etfs: ETF[] }) {
               <SortHeader label="샤프"      sortKey="sharpe"      current={sortKey} asc={asc} onClick={handleSort} />
               <SortHeader label="MDD"       sortKey="mdd"         current={sortKey} asc={asc} onClick={handleSort} />
               <SortHeader label="RSI"       sortKey="rsi"         current={sortKey} asc={asc} onClick={handleSort} />
-              <SortHeader label="분배수익률" sortKey="dist_yield"  current={sortKey} asc={asc} onClick={handleSort} />
-              <SortHeader label="거래대금억" sortKey="vol_avg_억"  current={sortKey} asc={asc} onClick={handleSort} />
+              <SortHeader label="분배율"    sortKey="dist_yield"  current={sortKey} asc={asc} onClick={handleSort} />
+              <SortHeader label="거래대금"  sortKey="vol_avg_억"  current={sortKey} asc={asc} onClick={handleSort} />
               <SortHeader label="AUM억"     sortKey="aum_억"      current={sortKey} asc={asc} onClick={handleSort} />
-              <th className="px-3 py-2 text-xs text-gray-400">차트</th>
+              <th className="px-3 py-2.5 text-xs text-slate-400">차트</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/60">
+          <tbody>
             {filtered.map((etf, i) => (
-              <tr key={etf.ticker} className="hover:bg-gray-800/40 transition-colors">
-                <td className="px-3 py-2 text-gray-600 text-xs">{i + 1}</td>
-                <td className="px-3 py-2">
+              <tr
+                key={etf.ticker}
+                className={`border-b border-gray-800/60 hover:bg-gray-800/50 transition-colors ${
+                  i % 2 === 0 ? "bg-gray-950/40" : "bg-gray-900/20"
+                }`}
+              >
+                <td className="px-3 py-2.5 text-slate-500 text-xs">{i + 1}</td>
+                <td className="px-3 py-2.5">
                   <Link href={`/etf/${etf.ticker}`} className="hover:text-blue-400 transition-colors">
                     <div className="etf-name">{etf.name}</div>
                     <div className="etf-ticker">{etf.ticker}</div>
                   </Link>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <span className={`text-xs font-medium ${CAT_COLOR[etf.category] ?? "text-gray-400"}`}>
                     {etf.category}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-white text-xs">
-                  {etf.price_last.toLocaleString()}
+
+                {/* 현재가 */}
+                <td className="px-3 py-2.5 cell-price">
+                  {etf.price_last > 0 ? etf.price_last.toLocaleString() : "—"}
                 </td>
+
                 <PctCell v={etf.mom_1m} />
                 <PctCell v={etf.mom_3m} />
-                <NumCell v={etf.vol_20d} unit="%" />
-                <NumCell v={etf.sharpe} />
+                <StatCell v={etf.vol_20d} unit="%" />
+
+                {/* 샤프 */}
+                {etf.sharpe == null
+                  ? <td className="px-3 py-2.5 cell-dash">—</td>
+                  : <td className={`px-3 py-2.5 cell-stat ${etf.sharpe >= 1 ? "!text-emerald-400" : etf.sharpe < 0 ? "!text-red-400" : ""}`}>
+                      {etf.sharpe.toFixed(2)}
+                    </td>
+                }
+
                 <PctCell v={etf.mdd} />
-                <td className="px-3 py-2 text-right font-mono text-xs">
-                  <span className={etf.rsi != null && etf.rsi > 70 ? "text-red-400" : etf.rsi != null && etf.rsi < 30 ? "text-blue-400" : "text-gray-300"}>
-                    {etf.rsi?.toFixed(0) ?? "—"}
-                  </span>
+                <RsiCell v={etf.rsi} />
+
+                {/* 분배율 */}
+                <td className="px-3 py-2.5 cell-stat">
+                  {etf.dist_yield > 0 ? `${etf.dist_yield.toFixed(2)}%` : <span className="cell-dash">—</span>}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-gray-300 text-xs">
-                  {etf.dist_yield > 0 ? `${etf.dist_yield.toFixed(2)}%` : "—"}
+
+                <StatCell v={etf.vol_avg_억} />
+
+                {/* AUM */}
+                <td className="px-3 py-2.5 cell-stat">
+                  {etf.aum_억 > 0 ? etf.aum_억.toFixed(0) : <span className="cell-dash">—</span>}
                 </td>
-                <NumCell v={etf.vol_avg_억} />
-                <NumCell v={etf.aum_억} />
-                <td className="px-3 py-2 text-center">
-                  <Link
-                    href={`/etf/${etf.ticker}`}
-                    className="text-xs text-gray-500 hover:text-blue-400 transition-colors"
-                  >
+
+                <td className="px-3 py-2.5 text-center">
+                  <Link href={`/etf/${etf.ticker}`} className="text-slate-500 hover:text-blue-400 transition-colors text-xs">
                     📈
                   </Link>
                 </td>

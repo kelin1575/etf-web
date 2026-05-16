@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #030712;
+  --foreground: #f1f5f9;
 }
 
 @theme inline {
@@ -12,20 +12,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ETF 테이블 이름 강제 스타일 */
+/* ── ETF 테이블 종목명 ───────────────────── */
 .etf-name {
   color: #f1f5f9 !important;
   font-size: 0.875rem;
@@ -36,4 +29,81 @@ body {
   color: #64748b;
   font-size: 0.75rem;
   margin-top: 2px;
+}
+
+/* ── 테이블 셀 수치 ─────────────────────── */
+.cell-price {
+  color: #f8fafc !important;   /* 현재가 — 가장 밝게 */
+  font-family: monospace;
+  font-size: 0.8rem;
+  text-align: right;
+}
+.cell-stat {
+  color: #cbd5e1 !important;   /* 변동성, 샤프, RSI 등 */
+  font-family: monospace;
+  font-size: 0.8rem;
+  text-align: right;
+}
+.cell-pos {
+  color: #f87171 !important;   /* 양수 수익률 (빨강) */
+  font-family: monospace;
+  font-size: 0.8rem;
+  text-align: right;
+  font-weight: 600;
+}
+.cell-neg {
+  color: #60a5fa !important;   /* 음수 수익률 (파랑) */
+  font-family: monospace;
+  font-size: 0.8rem;
+  text-align: right;
+  font-weight: 600;
+}
+.cell-neutral {
+  color: #94a3b8 !important;
+  font-family: monospace;
+  font-size: 0.8rem;
+  text-align: right;
+}
+.cell-dash {
+  color: #475569 !important;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+/* ── Top3 카드 ──────────────────────────── */
+.strategy-text {
+  color: #e2e8f0 !important;
+  line-height: 1.65;
+}
+.pick-reason {
+  color: #cbd5e1 !important;
+  line-height: 1.6;
+}
+.pick-score {
+  color: #fbbf24 !important;
+  font-weight: 600;
+}
+.pick-ticker-sub {
+  color: #6b7280 !important;
+  font-size: 0.7rem;
+}
+.stat-label {
+  color: #6b7280 !important;
+  font-size: 0.7rem;
+}
+.stat-value {
+  color: #e2e8f0 !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ── 히스토리 섹션 ──────────────────────── */
+.history-strategy {
+  color: #cbd5e1 !important;
+  line-height: 1.6;
+}
+.history-reason {
+  color: #94a3b8 !important;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }

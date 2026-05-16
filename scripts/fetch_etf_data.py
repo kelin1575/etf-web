@@ -12,6 +12,13 @@ import numpy as np
 import pandas as pd
 import FinanceDataReader as fdr
 
+# yfinance — 분배율/AUM 보조 데이터 (실패해도 계속 진행)
+try:
+    import yfinance as yf
+    _HAS_YF = True
+except ImportError:
+    _HAS_YF = False
+
 warnings.filterwarnings("ignore")
 
 OUT_DIR = Path(__file__).parent.parent / "public" / "data"
@@ -153,6 +160,28 @@ def calc_indicators(df: pd.DataFrame) -> dict:
     }
 
 
+def get_yf_meta(tickers: list[str]) -> dict[str, dict]:
+    """yfinance로 분배수익률·AUM 일괄 조회 (ticker → {dist_yield, aum_억})"""
+    if not _HAS_YF or not tickers:
+        return {}
+    yt = [f"{t}.KS" for t in tickers]
+    result = {}
+    try:
+        data = yf.download(yt, period="1d", auto_adjust=True, progress=False)
+        for t in tickers:
+            ys = f"{t}.KS"
+            try:
+                info = yf.Ticker(ys).info
+                dy   = float(info.get("dividendYield") or 0) * 100   # 소수점 → %
+                aum  = float(info.get("totalAssets") or 0) / 1e8
+                result[t] = {"dist_yield": round(dy, 3), "aum_억": round(aum, 1)}
+            except Exception:
+                result[t] = {"dist_yield": 0.0, "aum_억": 0.0}
+    except Exception as e:
+        print(f"  yfinance 일괄조회 실패: {e}")
+    return result
+
+
 def price_series(df: pd.DataFrame) -> list[dict]:
     if df.empty:
         return []
@@ -218,6 +247,10 @@ def main():
     name_map = dict(zip(listing["ticker"].astype(str).str.zfill(6),
                         listing["name"].astype(str)))
 
+    # yfinance로 분배율·AUM 일괄 사전 조회
+    print("  yfinance 메타데이터 조회 중...")
+    yf_meta = get_yf_meta(tickers)
+
     etf_list   = []
     price_data = {}
     success = 0
@@ -237,13 +270,14 @@ def main():
             continue
 
         price_last = int(df["close"].iloc[-1])
+        meta       = yf_meta.get(ticker, {"dist_yield": 0.0, "aum_억": 0.0})
 
         etf_list.append({
             "ticker":      ticker,
             "name":        name,
             "category":    classify(name),
-            "aum_억":      0.0,       # fdr에서 미제공 — 추후 확장
-            "dist_yield":  0.0,       # fdr에서 미제공 — 추후 확장
+            "aum_억":      meta["aum_억"],
+            "dist_yield":  meta["dist_yield"],
             "nav":         price_last,
             "price_last":  price_last,
             **ind,
