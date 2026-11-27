@@ -22,9 +22,20 @@ def get(url, enc="utf-8", tries=4):
                 raise
             time.sleep(1.5 * (i + 1))
 
+def months_back(d, m):
+    y, mo = d.year, d.month - m
+    while mo <= 0:
+        mo += 12; y -= 1
+    for day in (d.day, 30, 29, 28):
+        try:
+            return d.replace(year=y, month=mo, day=day)
+        except ValueError:
+            continue
+
 def prev_day_bar(code, now):
-    """fchart 일봉에서 '완결된 직전 거래일' 봉을 반환 (date, close, volume)."""
-    txt = get(f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=4&requestType=0", "euc-kr")
+    """fchart 일봉에서 '완결된 직전 거래일' 봉과, 그 날 종가 기준 기간 수익률을 계산.
+    (네이버 etfAnalysis 수익률은 새벽에 하루 늦게 갱신되므로 직접 계산한다)"""
+    txt = get(f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=270&requestType=0", "euc-kr")
     rows = [l.split('data="')[1].split('"')[0].split("|") for l in txt.splitlines() if 'data="' in l]
     if not rows:
         return None
@@ -35,7 +46,21 @@ def prev_day_bar(code, now):
     if not rows:
         return None
     d, o, h, l, c, v = rows[-1]
-    return {"date": d, "close": float(c), "volume": int(float(v))}
+    close = float(c)
+    base = dt.datetime.strptime(d, "%Y%m%d").date()
+
+    def ret(target):
+        t = target.strftime("%Y%m%d")
+        if rows[0][0] > t:
+            return None  # 이력 부족(신규 상장)
+        past = [r for r in rows if r[0] <= t][-1]
+        pc = float(past[4])
+        return round((close / pc - 1) * 100, 2) if pc else None
+
+    rets = {"r1w": ret(base - dt.timedelta(days=7)), "r1m": ret(months_back(base, 1)),
+            "r3m": ret(months_back(base, 3)), "r6m": ret(months_back(base, 6)),
+            "r1y": ret(months_back(base, 12))}
+    return {"date": d, "close": close, "volume": int(float(v)), "rets": rets}
 
 def detail(code):
     d = json.loads(get(f"https://m.stock.naver.com/api/stock/{code}/etfAnalysis"))
@@ -82,6 +107,10 @@ def main():
         out.append({"code": e["itemcode"], "name": name, "category": TAB.get(e["etfTabCode"], "기타"),
                     "leveraged": lev, "close": b["close"], "volume": b["volume"],
                     "tradeValue": round(b["close"] * b["volume"] / 1e8, 1), **(d or {})})
+        # 기간 수익률은 기준일 종가로 직접 계산한 값을 우선 사용 (3년·5년·YTD는 네이버 값)
+        out[-1].update(b["rets"])
+        out[-1]["naverPerfDate"] = out[-1].get("perfDate")
+        out[-1]["perfDate"] = f"{base[:4]}.{base[4:6]}.{base[6:]}"
     out.sort(key=lambda x: -x["volume"])
     res = {"baseDate": base, "generatedAt": now.isoformat(timespec="minutes"), "minVolume": a.min_volume,
            "totalEtfs": len(lst), "count": len(out), "items": out}
